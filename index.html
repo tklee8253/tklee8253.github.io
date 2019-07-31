@@ -1,0 +1,283 @@
+<html lang='en'>
+    <head>
+        <meta charset='utf-8'>
+
+        <style>
+            .bar {
+                fill: rgba(120, 137, 235, 0.925);
+            }
+            .bar:hover {
+                fill: rgb(21, 255, 0);
+            }
+
+            .arc text {
+              font: 12px sans-serif;
+              text-anchor: middle;
+            }
+            .d3-tip {
+                line-height: 1;
+                font-weight: bold;
+                padding: 12px;
+                background: rgba(0, 0, 0, 0.8);
+                color: #fff;
+                border-radius: 2px;
+            }
+            .d3-tip:after {
+                box-sizing: border-box;
+                display: inline;
+                font-size: 10px;
+                width: 100%;
+                line-height: 1;
+                color: rgba(0, 0, 0, 0.8);
+                content: "\25BC";
+                position: absolute;
+                text-align: center;
+            }
+
+            .arc path {
+              stroke: #fff;
+            }
+        </style>
+
+		<title>FIFA DATA</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+        <script src='https://d3js.org/d3.v5.js' charset='utf-8'></script>
+        <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+    </head>
+
+    <body>
+		<div class="container">
+			<div class="row">
+					<div class="col-sm-6">
+			<h1>Top 4 Football clubs in EUFA 2017-2018</h1>
+			<p>By Tae Kyung Lee</p> 
+		
+        <div id='year-selector-container'>
+            <input id='year-slider' class='year-range' type='range' min='2013' max='2018' value='2018'>
+            Year: <span id='year-span'>2018</span>
+        </div>
+        <div id='donutchart'></div>
+
+	</div>
+		
+				<div class="col-sm-6">
+					
+				</div>
+				<div class="col-sm-6">
+                    <div id='club-selector-container'>
+                            <svg height="100px" width="100px">
+                                    <line x1="10" y1="10" x2="10" y2="90" stroke="white"></line>
+                                </svg>
+                        <form id='club-selector'>
+                            <input type='radio' name='club-selector' id='rb-1' value='Real_Madrid' checked />
+                            <label for='rb-1'>Read Madrid</label>
+            
+                            <input type='radio' name='club-selector' id='rb-2' value='Liverpool' />
+                            <label for='rb-2'>Liverpool</label>
+            
+                            <input type='radio' name='club-selector' id='rb-3' value='Bayern_Munich' />
+                            <label for='rb-3'>FC Bayern Munich</label>
+                            
+                            <input type='radio' name='club-selector' id='rb-3' value='Roma' />
+                            <label for='rb-4'>FC Roma</label>
+                        </form>
+                    </div>
+                    <div id='barchart'></div>
+
+				</div>
+			</div>
+		</div>
+
+        <script>
+            
+            var data = [
+                {"year": 2013, "Real_Madrid": 3300, "Liverpool": 651, "Bayern_Munich": 1309, "Roma": 256},
+                {"year": 2014, "Real_Madrid": 3440, "Liverpool": 704, "Bayern_Munich": 1850, "Roma": 354},
+                {"year": 2015, "Real_Madrid": 3260, "Liverpool": 982, "Bayern_Munich": 2350, "Roma": 307 },
+                {"year": 2016, "Real_Madrid": 3645, "Liverpool": 1548, "Bayern_Munich": 2678, "Roma": 508},
+                {"year": 2017, "Real_Madrid": 3580, "Liverpool": 1492, "Bayern_Munich": 2713, "Roma": 569},
+                {"year": 2018, "Real_Madrid": 4088, "Liverpool": 1944, "Bayern_Munich": 3063, "Roma": 618}
+            ];
+
+            var updateRadio = function() {
+                clubSelected = document.querySelector('input[name=club-selector]:checked', '#club-selector').value; 
+                console.log('clubSelected:', clubSelected);
+                d3.selectAll('rect').remove();
+                drawBar(getDataFromClub(clubSelected));
+            }
+
+            var updateSlider = function() {
+                var slider = document.getElementById('year-slider');
+                var output = document.getElementById('year-span');
+                yearSelected = slider.value;
+                output.innerHTML = yearSelected;
+                console.log('yearSelected:', yearSelected);
+                d3.selectAll('.svgG').remove();
+                drawDonut(getDataFromYear(yearSelected));
+            }
+
+            d3.select('#club-selector').on('change', updateRadio);
+            d3.select('#year-slider').on('input', updateSlider); 
+
+            var yearSelected = d3.select('#year-span').text();
+            var clubSelected = document.querySelector('input[name=club-selector]:checked', '#club-selector').value; 
+            console.log('yearSelected:', yearSelected);
+            console.log('clubSelected:', clubSelected);
+
+            var svgBar = d3.select("#barchart").append("svg").attr("width", 600).attr("height", 300);
+            var marginBar = {top: 20, right: 100, bottom: 30, left: 100};
+            var widthBar = +svgBar.attr("width") - marginBar.left - marginBar.right;
+            var heightBar = +svgBar.attr("height") - marginBar.top - marginBar.bottom;
+            var xBar = d3.scaleBand().rangeRound([0, widthBar]).padding(0.1);
+            var yBar = d3.scaleLinear().rangeRound([heightBar, 0]);
+
+            createBar(data);
+            function createBar(data) {
+                var g = svgBar.append("g").attr('id', 'gBar').attr("transform", "translate(" + marginBar.left + ", " + marginBar.top + ")");
+
+                xBar.domain(data.map(function(d) { 
+                    return d.year; 
+                }));
+                yBar.domain([0, d3.max(data, function(d) { 
+                    if(clubSelected == 'Real_Madrid') return d.Real_Madrid;
+                    if(clubSelected == 'Liverpool') return d.Liverpool;
+					if(clubSelected == 'Bayern_Munich') return d.Bayern_Munich; 
+					if(clubSelected == 'Roma') return d.Roma; 
+                })]);
+
+                g.append("g")
+                    .attr("class", "axis axis--x")
+                    .attr("transform", "translate(0," + heightBar + ")")
+                    .call(d3.axisBottom(xBar));
+
+                g.append("g")
+                    .attr("class", "axis axis--y")
+                    .call(d3.axisLeft(yBar).ticks(10))
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", "0.71em")
+                    .attr("text-anchor", "end")
+
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 6)
+                    .attr("dy", "1.71em")
+                    .attr("hundred million")
+                
+
+
+                var initialData = getDataFromClub('Real_Madrid');
+                drawBar(initialData, heightBar);
+            }
+
+            // return the right data
+            function getDataFromClub(type) {
+                var arr = [];
+                data.forEach(function(item) {
+                    if(type == 'Real_Madrid') arr.push({"year": item.year, "value": item.Real_Madrid});
+                    if(type == 'Liverpool') arr.push({"year": item.year, "value": item.Liverpool});
+					if(type == 'Bayern_Munich') arr.push({"year": item.year, "value": item.Bayern_Munich});
+					if(type == 'Roma') arr.push({"year": item.year, "value": item.Roma});
+                });
+                return arr;
+            }
+
+            // draw barchart
+            function drawBar(mydata, height) {
+                d3.select('#gBar').selectAll(".bar")
+                    .data(mydata)
+                    .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", function(d) { 
+                        return xBar(d.year); 
+                    })
+                    .attr("y", function(d) {
+                        return yBar(d.value); 
+                    })
+                    .attr("width", xBar.bandwidth())
+                    .attr("height", function(d) { 
+                        return heightBar - yBar(d.value); 
+                    });
+            } // end draw 
+
+            /////////////////////////////////////////////////
+            // DONUT
+            /////////////////////////////////////////////////
+            var widthDonut = 600;
+            var heightDonut = 300;
+            var radiusDonut = Math.min(widthDonut, heightDonut) / 2;
+            var colorDonut = d3.scaleOrdinal()
+                .range(["violet", "blue", "green", "yellow", "orange", "red"]);
+            var arcDonut = d3.arc()
+                .outerRadius(radiusDonut - 10)
+                .innerRadius(radiusDonut - 150);
+            var pieDonut = d3.pie()
+                .sort(null)
+                .value(function(d) { 
+                    return d.value; 
+                });
+            var svgDonut = d3.select("#donutchart").append("svg")
+                .attr("width", widthDonut)
+                .attr("height", heightDonut);
+            var dataNestDonut = d3.nest()
+                    .key(function(d) {
+                        return d.year;
+                    })
+                .object(data);
+
+            createDonut();
+            function createDonut() {
+                var initialData = getDataFromYear(yearSelected);
+                drawDonut(initialData);
+            }
+
+            // return the right data
+            function getDataFromYear(year) {
+                var filterData = dataNestDonut[year].slice();
+                var arr = [{"clubdata": "Real_Madrid", "value": filterData[0].Real_Madrid}, {"clubdata": "Liverpool", "value": filterData[0].Liverpool}, {"clubdata": "Bayern_Munich", "value": filterData[0].Bayern_Munich}, {"clubdata": "Roma", "value": filterData[0].Roma}];
+                return arr;
+            }
+
+            function drawDonut(data) {
+                var svgG = svgDonut.append("g")
+                    .attr('class', 'svgG')
+                    .attr("transform", "translate(" + widthDonut /2 + "," + heightDonut / 2 + ")");
+
+                var g = svgG.selectAll(".arc")
+                    .data(pieDonut(data))
+                    .enter()
+                    .append("g")
+                    .attr("class", "arc");
+
+                g.append("path")
+                    .attr("d", arcDonut)
+                    .style("fill", function(d) { 
+                        return colorDonut(d.data.clubdata); 
+                    });
+
+                g.append("text")
+                    .attr("transform", function(d) { 
+                        return "translate(" + arcDonut.centroid(d) + ")"; 
+                    })
+                    .attr("dy", "0em")
+                    .text(function(d) { 
+                        return (d.data.clubdata ); 
+                    });
+                
+                g.append("text")
+                    .attr("transform", function(d) { 
+                        return "translate(" + arcDonut.centroid(d) + ")"; 
+                    })
+                    .attr("dy", "1em")
+                    .text(function(d) { 
+                        return (d.data.value + "million"); 
+                    });
+            }            
+        </script>
+
+    </body>
+</html>
